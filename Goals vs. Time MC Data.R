@@ -39,7 +39,7 @@ library(scales)
 #---IMPORT DATA---
 
 #Main Data
-mdata<-read.csv("/Users/Miguel/Desktop/Projects/MC2012Data.csv")
+mdata<-read.csv("/Users/Miguel/Desktop/Projects/2011-12_EPL_Data/MC2012Data.csv")
 #Note that not all columns are visibile from the view window.
 
 #Let's start by simplifying our data set. First, pick a few key variabiles. 
