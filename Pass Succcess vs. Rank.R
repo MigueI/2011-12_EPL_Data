@@ -1,4 +1,4 @@
-# BACKGROUND STUFF
+#---BACKGROUND STUFF---
 # Verify that R version 3.1.2 is being used.  Should be True if not follow steps
 # 1-3 here: http://reed.edu/data-at-reed/software/R/r_studio.html
 R.Version()$major == '3' & R.Version()$minor == '1.2'
@@ -37,62 +37,39 @@ library(scales)
 
 #Main Data
 mdata<-read.csv("/Users/Miguel/Desktop/Projects/2011-12_EPL_Data/MC2012Data.csv")
+mdata <- tbl_df(mdata)
 #Note that not all columns are visibile from the view window.
 
 #Let's start by simplifying our data set. First, pick a few key variabiles. 
-sdata <- mdata %>% select(Player.Surname, Player.Forename, Team, Time.Played, Goals, Position.Id)
+sdata <- mdata %>% select(Player.Surname, Player.Forename, Team,  Total.Successful.Passes.All, Total.Unsuccessful.Passes.All)
 
 #Scrape Wikipedia for season ending information:
 webpage <- html("http://en.wikipedia.org/wiki/2011%E2%80%9312_Premier_League")
 # Look at third of all HTML tables
 wp_data <- webpage %>% html_nodes("table") %>% .[[4]] %>% html_table(,fill=TRUE)
+wp_data[[1,2]] <- "Manchester City"
+wp_data[[18,2]] <- "Bolton Wanderers"
+wp_data[[19,2]] <- "Blackburn Rovers"
+wp_data[[20,2]] <- "Wolverhampton Wanderers"
 rank <- wp_data %>% select(Pos, Team)
-rank[[1,2]] <- "Manchester City"
-rank[[18,2]] <- "Bolton Wanderers"
-rank[[19,2]] <- "Blackburn Rovers"
-rank[[20,2]] <- "Wolverhampton Wanderers"
-  
-#This function changes a number to a name. We'll use it later.
-posi <- function(arg) {
-  if(arg == 1) {
-    return("Goalie")
-  } else if(arg == 2) {
-    return("Defense")
-  } else if(arg == 4) {
-    return("Midfield")
-  } else if(arg == 6) {
-    return("Striker")
-  } 
-}
 
-#---ALL TEAMS---
+#---Percentage Passes---
 
 alldata <- sdata %>% arrange(Team, Player.Surname) 
+alldata %<>% group_by(Team) %>% 
+  summarise(succ_pass = sum(Total.Successful.Passes.All), fail_pass = sum(Total.Unsuccessful.Passes.All))
+alldata <- mutate(alldata, pass_perc = succ_pass/(succ_pass+fail_pass)*100)
+alldata <- mutate(alldata, pass_total = (succ_pass+fail_pass))
 
-#Now we want to look at the total minutes each player played over the course of the season. 
-
-alldata %<>% group_by(Team, Player.Surname, Player.Forename, Position.Id) %>% 
-  summarise(tottime = sum(Time.Played), totgoals = sum(Goals))
-mutate(alldata, Rank = 0)
-
-#Add rank into our dataset.
+#Add rank
 for(i in seq(1:nrow(alldata))) {
   for(j in seq(1:nrow(rank))) {
     ifelse(alldata$Team[[i]] == rank$Team[[j]], alldata$Rank[[i]] <- rank$Pos[[j]],"") 
   }
 }
-
 alldata %<>% group_by(Rank) %>% arrange(Rank)
 
-#Replace number with Name for position id
-for(i in seq(1:nrow(alldata))) {
-  alldata$Position.Id[i] = posi(alldata$Position.Id[i])
-}
 
-#The plot!
-ggplot(alldata, aes(x = tottime, y = totgoals, color = desc(Rank))) + 
-  geom_point(size = 2) + facet_wrap(~Position.Id) + xlab("Total Minutes Played") + 
-  ylab("Total Goals Scored") + 
-  ggtitle("Goals Scored vs. Minutes Played\nOver 2012-2013 EPL Season") +
-  scale_colour_gradient("Rank at End\nof Season", high = "orange", low = "blue") +
-  theme_classic()
+#Plot
+ggplot(alldata, aes(x = desc(Rank), y = pass_perc, color = pass_total)) + 
+  geom_point() + ylab("Successful Passes (%)")
