@@ -1,4 +1,4 @@
-# 2011-12_EPL_Data
+# 2011-12 EPL Data
 
 I want to get better at R, and the best way to do that is
 by making stuff with it. I'll try my hand at analyzing some 
